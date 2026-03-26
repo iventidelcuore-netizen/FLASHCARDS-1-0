@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Module": {
+      "title": "Module",
+      "description": "A learning module containing lessons and flashcards.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the module." },
+        "uid": { "type": "string", "description": "User ID of the owner." },
+        "name": { "type": "string", "description": "Name of the lesson." },
+        "content": { "type": "string", "description": "Content of the lesson." },
+        "cardCount": { "type": "number", "description": "Number of cards in the module." },
+        "group": { "type": "string", "description": "Group/Category of the module." },
+        "unlocked": { "type": "boolean", "description": "Whether the module is unlocked for study." }
+      },
+      "required": ["id", "uid", "name", "content", "cardCount", "unlocked"]
+    },
+    "Flashcard": {
+      "title": "Flashcard",
+      "description": "A single flashcard for spaced repetition study.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID of the flashcard." },
+        "uid": { "type": "string", "description": "User ID of the owner." },
+        "front": { "type": "string", "description": "Front side of the card (English)." },
+        "back": { "type": "string", "description": "Back side of the card (Portuguese)." },
+        "moduleName": { "type": "string", "description": "Name of the parent module." },
+        "createdAt": { "type": "number", "description": "Creation timestamp." },
+        "nextReviewDate": { "type": "number", "description": "Timestamp for the next review." },
+        "interval": { "type": "number", "description": "Current SRS interval in days." },
+        "reps": { "type": "number", "description": "Number of successful repetitions." },
+        "ease": { "type": "number", "description": "SRS ease factor." }
+      },
+      "required": ["id", "uid", "front", "back", "moduleName", "createdAt", "nextReviewDate", "interval", "reps", "ease"]
+    }
+  },
+  "firestore": {
+    "/modules/{moduleId}": {
+      "schema": "Module",
+      "description": "Collection of learning modules."
+    },
+    "/flashcards/{cardId}": {
+      "schema": "Flashcard",
+      "description": "Collection of flashcards."
+    }
+  }
+}

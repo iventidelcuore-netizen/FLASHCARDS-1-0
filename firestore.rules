@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: modules
+    // Document ID: moduleId (string)
+    // Fields:
+    //   - id: string (required) - Unique ID of the module.
+    //   - uid: string (required) - User ID of the owner.
+    //   - name: string (required) - Name of the lesson.
+    //   - content: string (required) - Content of the lesson.
+    //   - cardCount: number (required) - Number of cards in the module.
+    //   - group: string (optional) - Group/Category of the module.
+    //   - unlocked: boolean (required) - Whether the module is unlocked for study.
+    //
+    // Collection: flashcards
+    // Document ID: cardId (string)
+    // Fields:
+    //   - id: string (required) - Unique ID of the flashcard.
+    //   - uid: string (required) - User ID of the owner.
+    //   - front: string (required) - Front side of the card (English).
+    //   - back: string (required) - Back side of the card (Portuguese).
+    //   - moduleName: string (required) - Name of the parent module.
+    //   - createdAt: number (required) - Creation timestamp.
+    //   - nextReviewDate: number (required) - Timestamp for the next review.
+    //   - interval: number (required) - Current SRS interval in days.
+    //   - reps: number (required) - Number of successful repetitions.
+    //   - ease: number (required) - SRS ease factor.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidModule(data) {
+      return hasRequiredFields(['id', 'uid', 'name', 'content', 'cardCount', 'unlocked']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.cardCount is number &&
+             data.unlocked is bool &&
+             (!('group' in data) || (data.group is string && data.group.size() < 100));
+    }
+
+    function isValidFlashcard(data) {
+      return hasRequiredFields(['id', 'uid', 'front', 'back', 'moduleName', 'createdAt', 'nextReviewDate', 'interval', 'reps', 'ease']) &&
+             data.id is string && data.id.size() > 0 &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.front is string && data.front.size() > 0 && data.front.size() < 1000 &&
+             data.back is string && data.back.size() > 0 && data.back.size() < 1000 &&
+             data.moduleName is string && data.moduleName.size() > 0 &&
+             data.createdAt is number &&
+             data.nextReviewDate is number &&
+             data.interval is number &&
+             data.reps is number &&
+             data.ease is number;
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /modules/{moduleId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidModule(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidModule(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+
+    match /flashcards/{cardId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidFlashcard(request.resource.data) && uidUnchanged();
+      allow update: if isDocOwner() && isValidFlashcard(request.resource.data) && uidNotModified();
+      allow delete: if isDocOwner();
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
